@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Coverage
+coverage/
+
+# Environment variables
+.env*
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Examples dependencies and build
+examples/node_modules/
+examples/dist/
+
+bak/
+lib/
+# AI assistant files
+GEMINI.md
+AmazonQ.md
+AGENTS.md
+gptel.md
+CONVENTIONS.md
+
+# Backup folder
+bak/
