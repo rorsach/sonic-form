@@ -2,7 +2,7 @@
 
 A lightweight, TypeScript-first React form validation hook with natural event-driven validation.
 
-This form validation library out of frustration with the existing solutions available in the React space. Most forms are simple enough. The constraints of each field need to be defined and then you as a developer just need to decide what to do with the form data once everything `isValid`.
+This form validation library is born from my frustration with the existing solutions available in the React space. Most forms are simple enough. The constraints of each field need to be defined and then you as a developer just need to decide what to do with the form data once everything `isValid`. Many form solutions cover a lot of ground that is unecessary for most situations.
 
 ## Features
 
@@ -138,9 +138,9 @@ const validationOptions = {
 };
 ```
 
-### Advanced Cross-field Validation with `partialFn`
+### Cross-field Validation with `partialFn`
 
-`partialFn` is a powerful partial application function that enables complex validation scenarios where fields depend on each other. It's essential for validating addresses, date/time ranges, and conditional field requirements.
+`partialFn` is a partial application function that enables validation scenarios where fields depend on each other. It's for validating addresses, date/time ranges, and conditional field requirements.
 
 #### Basic partialFn Usage
 
@@ -191,7 +191,7 @@ const validationOptions = {
 
 #### Conditional Field Requirements
 
-Perfect for scenarios where fields are only required based on other field values:
+For scenarios where fields are only required based on other field values:
 
 #### Address Validation Example
 
@@ -249,7 +249,7 @@ const validateZipFormat = (country, zipCode) => {
 
 #### How partialFn Works
 
-`partialFn` uses placeholders (`partialFn_`) to create validation functions on the fly:
+`partialFn` is a partial application function with generic parameter replacement. It uses placeholders (`partialFn_`) to create validation functions on the fly:
 
 ```tsx
 // This creates a validation function that checks if both dates are entered
@@ -433,26 +433,6 @@ const validationOptions = {
 - Be a primary field (`relatedFields`) that affects other primary fields
 
 Attempting to use both will throw an error in development mode.
-
-### Specialized Handlers
-
-#### Dropdown/Select Elements
-
-```tsx
-<select name="category" onChange={handleDropdownChange}>
-  <option value="">Select category</option>
-  <option value="A">Category A</option>
-</select>
-```
-
-#### Date Picker Components
-
-```tsx
-<DatePicker
-  name="selectedDate"
-  onInput={handleDatePickerChange} // Expects event.detail with date
-/>
-```
 
 ## Validation Behavior
 

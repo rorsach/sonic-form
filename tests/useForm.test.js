@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { renderHook, act } from '@testing-library/react';
-import { useForm } from '../lib/useForm';
+import { useForm } from '../src/useForm';
 
 describe('useForm', () => {
   let initialFormValues;

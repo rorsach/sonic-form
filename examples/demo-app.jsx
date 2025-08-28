@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { useForm } from '@rorsach/sonic-form';
 import { 
-  areBothDatesEntered, 
-  isEndDateAfterStartDate, 
+  useForm,
   isAsciiAlphanumeric,
-  isInTheFuture 
-} from '@rorsach/sonic-form';
-import { partialFn, partialFn_ } from '@rorsach/sonic-form';
+  isInTheFuture,
+  areDateFieldsPaired,
+  isAfter,
+  partialFn, 
+  partialFn_
+} from '../src/index';
 import './index.css';
 
 const DemoApp = () => {
@@ -113,7 +114,7 @@ const DemoApp = () => {
     startDate: {
       validations: [
         {
-          isValid: partialFn(areBothDatesEntered, partialFn_, advancedFormValues.endDate),
+          isValid: partialFn(areDateFieldsPaired, partialFn_, advancedFormValues.endDate),
           errorMessage: 'If start date is entered, end date is also required'
         }
       ],
@@ -122,11 +123,11 @@ const DemoApp = () => {
     endDate: {
       validations: [
         {
-          isValid: partialFn(areBothDatesEntered, advancedFormValues.startDate, partialFn_),
+          isValid: partialFn(areDateFieldsPaired, advancedFormValues.startDate, partialFn_),
           errorMessage: 'If end date is entered, start date is also required'
         },
         {
-          isValid: partialFn(isEndDateAfterStartDate, advancedFormValues.startDate, partialFn_),
+          isValid: partialFn(isAfter, advancedFormValues.startDate, partialFn_),
           errorMessage: 'End date must be after start date'
         }
       ],

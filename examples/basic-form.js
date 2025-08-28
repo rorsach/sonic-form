@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm } from '../lib';
+import { useForm } from '../src/index';
 
 const BasicFormExample = () => {
   const [formValues, setFormValues] = useState({ email: '', password: '' });
