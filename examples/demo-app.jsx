@@ -5,7 +5,7 @@ import {
   isInTheFuture,
   areDateFieldsPaired,
   isAfter,
-  partialFn, 
+  partialFnWithFields, 
   partialFn_
 } from '../src/index';
 import './index.css';
@@ -114,7 +114,7 @@ const DemoApp = () => {
     startDate: {
       validations: [
         {
-          isValid: partialFn(areDateFieldsPaired, partialFn_, advancedFormValues.endDate),
+          isValid: partialFnWithFields(areDateFieldsPaired, partialFn_, '@endDate'),
           errorMessage: 'If start date is entered, end date is also required'
         }
       ],
@@ -123,11 +123,11 @@ const DemoApp = () => {
     endDate: {
       validations: [
         {
-          isValid: partialFn(areDateFieldsPaired, advancedFormValues.startDate, partialFn_),
+          isValid: partialFnWithFields(areDateFieldsPaired, '@startDate', partialFn_),
           errorMessage: 'If end date is entered, start date is also required'
         },
         {
-          isValid: partialFn(isAfter, advancedFormValues.startDate, partialFn_),
+          isValid: partialFnWithFields(isAfter, '@startDate', partialFn_),
           errorMessage: 'End date must be after start date'
         }
       ],

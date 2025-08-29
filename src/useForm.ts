@@ -13,11 +13,10 @@ export function useForm({
     setErrors,
     validationOptions,
 }: {
-    // TODO: make this generic for better type safety
     formValues: FormValues,
-    setFormValues: any,
+    setFormValues: React.Dispatch<React.SetStateAction<FormValues>>,
     errors: FormErrors,
-    setErrors: any,
+    setErrors: React.Dispatch<React.SetStateAction<FormErrors>>,
     validationOptions: { [key: string]: ValidationOption }
 }): UseForm {
     const getFieldName = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): string | undefined => {
@@ -47,7 +46,7 @@ export function useForm({
         }));
     };
 
-    const validate = async (pname: string, currentValue?: any): Promise<boolean> => {
+    const validate = async (pname: string, currentValue?: unknown): Promise<boolean> => {
         let errorMessage = '';
 
         const nameToValidate = validationOptions[pname].nestedFieldOf || pname;
@@ -58,10 +57,15 @@ export function useForm({
 
         // Use the provided current value if available, otherwise fall back to form values
         const valueToValidate = currentValue !== undefined ? currentValue : formValues[nameToValidate];
+        
+        // Create updated form values for cross-field validation
+        const updatedFormValues = currentValue !== undefined 
+            ? { ...formValues, [pname]: currentValue }
+            : formValues;
 
         for (const validation of validations) {
             try {
-                const result = await Promise.resolve(validation.isValid(valueToValidate));
+                const result = await Promise.resolve(validation.isValid(valueToValidate, updatedFormValues));
                 if (!result) {
                     errorMessage = validation.errorMessage;
                     // Current behavior: do not short-circuit
@@ -73,7 +77,7 @@ export function useForm({
             }
         }
 
-        setErrors((prevState: any) => ({
+        setErrors((prevState: FormErrors) => ({
             ...prevState,
             [nameToValidate]: errorMessage,
         }));
@@ -124,14 +128,14 @@ export function useForm({
     };
 
     // Pluggable handler for external/custom field types (e.g., DatePicker)
-    const handleCustomChange = (field: string, value: any): void => {
+    const handleCustomChange = (field: string, value: unknown): void => {
         setFormValues((prevState: FormValues) => ({
             ...prevState,
             [field]: value,
         }));
     };
 
-    const handleDatePickerChange = (event: any): void => {
+    const handleDatePickerChange = (event: CustomEvent & { target: HTMLElement & { name: string } }): void => {
         if (!event.detail) {
             return;
         }
@@ -194,13 +198,13 @@ export interface ValidationOption {
 
 /** Signature of a validation function and corresponding error message */
 export interface Validation {
-    isValid: (arg: any) => boolean | Promise<boolean>;
+    isValid: (arg: unknown, formValues?: FormValues) => boolean | Promise<boolean>;
     errorMessage: string;
 }
 
 /** React state object returned by useState and passed into the useForm hook by the caller, to store form values. */
 export interface FormValues {
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 /** React state object returned by useState and passed into the useForm hook by the caller, to store form validation error messages. */
@@ -211,7 +215,7 @@ export interface FormErrors {
 /** A map of event handlers to attach to form field events. */
 interface UseForm {
     /** Attach `handleDatePickerChange` to a onInput of a DatePicker */
-    handleDatePickerChange: (event: any) => void;
+    handleDatePickerChange: (event: CustomEvent & { target: HTMLElement & { name: string } }) => void;
     /** Attach `handleDropdownChange` to a onChange of a Dropdown */
     handleDropdownChange: (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
     /** Attach `handleChange` to input onChange events. */
@@ -219,7 +223,7 @@ interface UseForm {
     /** Attach `handleBlur` to input onBlur events. */
     handleBlur: (event: React.FocusEvent<HTMLInputElement>) => void;
     /** Pluggable handler for arbitrary field value changes */
-    handleCustomChange: (field: string, value: any) => void;
+    handleCustomChange: (field: string, value: unknown) => void;
     /** Attach `handleSubmit` to any element that should trigger whole form validation. */
     handleSubmit: (event: React.FormEvent<HTMLFormElement>) => Promise<boolean>;
     /** Validate all fields manually. */

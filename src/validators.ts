@@ -3,10 +3,43 @@
 // =============================================================================
 
 /**
- * Wraps a validator to skip empty, null, or undefined values.
+ * Resolves field references (@fieldName) to actual values from formValues
  */
-const withOptional = <T extends any[], R>(
-  validator: (...args: T) => R
+const resolveFieldRef = (arg: unknown, formValues?: { [key: string]: unknown }): unknown => {
+  if (typeof arg === 'string' && arg.startsWith('@') && formValues) {
+    const fieldName = arg.slice(1);
+    return formValues[fieldName];
+  }
+  return arg;
+};
+
+/**
+ * Creates field-aware validators that can resolve field references
+ */
+const createFieldAwareValidator = <T extends unknown[]>(
+  validator: (...args: T) => boolean | true
+) => (...args: T) => (value: unknown, formValues?: { [key: string]: unknown }): boolean | true => {
+  const resolvedArgs = args.map(arg => resolveFieldRef(arg, formValues)) as T;
+  return validator(value, ...resolvedArgs);
+};
+
+// Field-aware versions of validators
+export const isAfterField = (reference: string) => (value: unknown, formValues?: { [key: string]: unknown }): boolean | true => {
+  const referenceValue = reference.startsWith('@') && formValues ? formValues[reference.slice(1)] : reference;
+  if (!value || !referenceValue) return true;
+  const d1 = parseDate(value as Date | string | number);
+  const d2 = parseDate(referenceValue as Date | string | number);
+  return !d1 || !d2 ? true : d1 > d2;
+};
+
+export const areDateFieldsPairedField = (otherField: string) => (value: unknown, formValues?: { [key: string]: unknown }): boolean | true => {
+  const otherValue = otherField.startsWith('@') && formValues ? formValues[otherField.slice(1)] : otherField;
+  const hasValue = Boolean(value && value.toString().trim().length > 0);
+  const hasOther = Boolean(otherValue && otherValue.toString().trim().length > 0);
+  return hasValue === hasOther || (!hasValue && !hasOther);
+};
+const withOptional = <T extends unknown[], R>(
+  validator: (...args: T) => R,
 ) => (...args: T): R | true => {
   const value = args[0];
   if (value === null || value === undefined || value === '') return true as R | true;
@@ -25,14 +58,14 @@ const parseDate = (date: string | number | Date | null | undefined): Date | null
 /**
  * Creates a regex-based validator with optional empty values allowed.
  */
-const matches = (regex: RegExp) =>
-  withOptional((value: string) => regex.test(value.trim()));
+const matches = (regex: RegExp): ((value: string) => boolean | true) =>
+  withOptional((value: string): boolean => regex.test(value.trim()));
 
 // =============================================================================
 // BASIC VALIDATORS
 // =============================================================================
 
-export const isRequired = (value: any): boolean => {
+export const isRequired = (value: unknown): boolean => {
   if (value === null || value === undefined) return false;
   if (typeof value === 'string') return value.trim().length > 0;
   if (typeof value === 'number') return !isNaN(value);
@@ -41,11 +74,11 @@ export const isRequired = (value: any): boolean => {
   return Boolean(value);
 };
 
-export const hasMinLength = (minLength: number) =>
-  withOptional((value: string) => value.length >= minLength);
+export const hasMinLength = (minLength: number): ((value: string) => boolean | true) =>
+  withOptional((value: string): boolean => value.length >= minLength);
 
-export const hasMaxLength = (maxLength: number) =>
-  withOptional((value: string) => value.length <= maxLength);
+export const hasMaxLength = (maxLength: number): ((value: string) => boolean | true) =>
+  withOptional((value: string): boolean => value.length <= maxLength);
 
 // =============================================================================
 // STRING / PATTERN VALIDATORS
@@ -55,13 +88,13 @@ export const isAsciiAlphanumeric = matches(/^[a-zA-Z0-9]+$/);
 export const isAlphaOnly = matches(/^[a-zA-Z]+$/);
 export const isNumericOnly = matches(/^\d+$/);
 export const isValidName = matches(/^[a-zA-Z\s\-']+$/);
-export const isValidStreetAddress = matches(/^[a-zA-Z0-9\s\-'\.#,]+$/);
+export const isValidStreetAddress = matches(/^[a-zA-Z0-9\s\-'.#,]+$/);
 export const isValidUSZipCode = matches(/^\d{5}(-\d{4})?$/);
 export const isValidCanadianPostalCode = matches(/^[A-Z]\d[A-Z] \d[A-Z]\d$/i);
 export const isValidHexColor = matches(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/);
 export const isValidTime = matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/);
 
-export const matchesPattern = (pattern: RegExp) => matches(pattern);
+export const matchesPattern = (pattern: RegExp): ((value: string) => boolean | true) => matches(pattern);
 
 // =============================================================================
 // EMAIL / URL VALIDATORS
@@ -98,21 +131,21 @@ export const isValidInternationalPhone = withOptional((value: string) => {
 // DATE & TIME VALIDATORS
 // =============================================================================
 
-export const isAfter = (reference: Date | string | number) =>
-  withOptional((value: Date | string | number) => {
+export const isAfter = (reference: Date | string | number): ((value: Date | string | number) => boolean | true) =>
+  withOptional((value: Date | string | number): boolean => {
     const d1 = parseDate(value);
     const d2 = parseDate(reference);
     return !d1 || !d2 ? true : d1 > d2;
   });
 
-export const isBefore = (reference: Date | string | number) =>
-  withOptional((value: Date | string | number) => {
+export const isBefore = (reference: Date | string | number): ((value: Date | string | number) => boolean | true) =>
+  withOptional((value: Date | string | number): boolean => {
     const d1 = parseDate(value);
     const d2 = parseDate(reference);
     return !d1 || !d2 ? true : d1 < d2;
   });
 
-export const isWithinLastYear = withOptional((value: string | Date) => {
+export const isWithinLastYear = withOptional((value: string | Date): boolean => {
   const d = parseDate(value);
   if (!d) return true;
   const oneYearAgo = new Date();
@@ -123,8 +156,8 @@ export const isWithinLastYear = withOptional((value: string | Date) => {
 export const isInTheFuture = isAfter(new Date());
 
 // Minimum age (birth date)
-export const isBirthDateMinimumAge = (minAge: number) =>
-  withOptional((birthDate: string | Date) => {
+export const isBirthDateMinimumAge = (minAge: number): ((birthDate: string | Date) => boolean | true) =>
+  withOptional((birthDate: string | Date): boolean => {
     const birth = parseDate(birthDate);
     if (!birth) return true;
     const today = new Date();
@@ -137,7 +170,7 @@ export const isBirthDateMinimumAge = (minAge: number) =>
   });
 
 // Paired dates
-export const areDateFieldsPaired = (date1: any, date2: any): boolean => {
+export const areDateFieldsPaired = (date1: unknown, date2: unknown): boolean => {
   const hasDate1 = Boolean(date1 && date1.toString().trim().length > 0);
   const hasDate2 = Boolean(date2 && date2.toString().trim().length > 0);
   return hasDate1 === hasDate2 || (!hasDate1 && !hasDate2);
@@ -152,15 +185,15 @@ const US_STATES = [
   'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
   'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
   'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
-  'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC'
+  'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC',
 ];
 
 const CANADIAN_PROVINCES = [
-  'AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT'
+  'AB','BC','MB','NB','NL','NS','NT','NU','ON','PE','QC','SK','YT',
 ];
 
-const isOneOfList = (list: string[]) =>
-  withOptional((value: string) => list.includes(value.trim().toUpperCase()));
+const isOneOfList = (list: string[]): ((value: string) => boolean | true) =>
+  withOptional((value: string): boolean => list.includes(value.trim().toUpperCase()));
 
 export const isValidUSState = isOneOfList(US_STATES);
 export const isValidCanadianProvince = isOneOfList(CANADIAN_PROVINCES);
@@ -174,28 +207,28 @@ export const isInteger = withOptional((value: number | string) => {
   return !isNaN(num) && Number.isInteger(num);
 });
 
-export const isDecimal = withOptional((value: number | string) => {
+export const isDecimal = withOptional((value: number | string): boolean => {
   const num = typeof value === 'string' ? parseFloat(value) : value;
   return !isNaN(num) && isFinite(num);
 });
 
-export const isInRange = (min: number, max: number) =>
-  withOptional((value: number | string) => {
+export const isInRange = (min: number, max: number): ((value: number | string) => boolean | true) =>
+  withOptional((value: number | string): boolean => {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     return !isNaN(num) && num >= min && num <= max;
   });
 
-export const greaterThan = (min: number) =>
-  withOptional((value: number | string) => +value > min);
+export const greaterThan = (min: number): ((value: number | string) => boolean | true) =>
+  withOptional((value: number | string): boolean => +value > min);
 
-export const lessThan = (max: number) =>
-  withOptional((value: number | string) => +value < max);
+export const lessThan = (max: number): ((value: number | string) => boolean | true) =>
+  withOptional((value: number | string): boolean => +value < max);
 
-export const greaterThanOrEqual = (min: number) =>
-  withOptional((value: number | string) => +value >= min);
+export const greaterThanOrEqual = (min: number): ((value: number | string) => boolean | true) =>
+  withOptional((value: number | string): boolean => +value >= min);
 
-export const lessThanOrEqual = (max: number) =>
-  withOptional((value: number | string) => +value <= max);
+export const lessThanOrEqual = (max: number): ((value: number | string) => boolean | true) =>
+  withOptional((value: number | string): boolean => +value <= max);
 
 // =============================================================================
 // PASSWORD VALIDATORS
@@ -209,8 +242,8 @@ interface PasswordOptions {
   requireSymbols?: boolean;
 }
 
-export const isStrongPassword = (options: PasswordOptions = {}) =>
-  withOptional((value: string) => {
+export const isStrongPassword = (options: PasswordOptions = {}): ((value: string) => boolean | true) =>
+  withOptional((value: string): boolean => {
     const {
       minLength = 8,
       requireUppercase = true,
@@ -223,7 +256,7 @@ export const isStrongPassword = (options: PasswordOptions = {}) =>
     if (requireUppercase && !/[A-Z]/.test(value)) return false;
     if (requireLowercase && !/[a-z]/.test(value)) return false;
     if (requireNumbers && !/\d/.test(value)) return false;
-    if (requireSymbols && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(value)) return false;
+    if (requireSymbols && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(value)) return false;
 
     return true;
   });
@@ -276,14 +309,14 @@ export const isValidCVV = matches(/^\d{3,4}$/);
 // CONDITIONAL VALIDATORS
 // =============================================================================
 
-export const isRequiredIf = (condition: boolean) => (value: any): boolean =>
+export const isRequiredIf = (condition: boolean) => (value: unknown): boolean =>
   condition ? isRequired(value) : true;
 
-export const isEqual = (comparison: any) => (value: any): boolean =>
+export const isEqual = (comparison: unknown) => (value: unknown): boolean =>
   value === comparison || (value == null && comparison == null);
 
-export const isOneOf = (allowedValues: any[]) =>
-  withOptional((value: any) => allowedValues.includes(value));
+export const isOneOf = (allowedValues: unknown[]): ((value: unknown) => boolean | true) => 
+  withOptional((value: unknown): boolean => allowedValues.includes(value));
 
-export const isSameAs = (otherFieldValue: any) =>
-  withOptional((value: any) => value === otherFieldValue);
+export const isSameAs = (otherFieldValue: unknown): ((value: unknown) => boolean | true) =>
+  withOptional((value: unknown): boolean => value === otherFieldValue);

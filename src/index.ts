@@ -10,7 +10,7 @@ export type {
 } from './useForm';
 
 // Partial application utility
-export { partialFn, partialFn_ } from './partialFn';
+export { partialFn, partialFn_, partialFnWithFields } from './partialFn';
 
 // Common validators and validation helper functions
 export * from './validators';
