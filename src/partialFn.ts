@@ -20,7 +20,8 @@ export function partialFn<T extends (...args: unknown[]) => unknown>(fn: T, ...b
             resultArgs.push(callArgs[nextArg]);
         }
 
-        return fn.apply(this, resultArgs) as ReturnType<T>;
+        const result = fn.apply(this, resultArgs) as ReturnType<T>;
+        return result;
     };
 }
 
@@ -30,7 +31,8 @@ export function partialFnWithFields<T extends (...args: unknown[]) => unknown>(f
         // Resolve field references in boundArgs
         const resolvedArgs = boundArgs.map(arg => {
             if (typeof arg === 'string' && arg.startsWith('@') && formValues) {
-                return formValues[arg.slice(1)];
+                const fieldName = arg.slice(1);
+                return formValues[fieldName];
             }
             return arg;
         });

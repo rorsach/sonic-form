@@ -63,9 +63,13 @@ export function useForm({
             ? { ...formValues, [pname]: currentValue }
             : formValues;
 
+
+
         for (const validation of validations) {
             try {
                 const result = await Promise.resolve(validation.isValid(valueToValidate, updatedFormValues));
+
+                
                 if (!result) {
                     errorMessage = validation.errorMessage;
                     // Current behavior: do not short-circuit
@@ -93,13 +97,11 @@ export function useForm({
         }
     };
 
-    const validateRelatedFields = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
-        const name = getFieldName(event);
-        if (!name) {
+    const validateRelatedFields = (name: string): void => {
+        const fieldConfig = validationOptions[name];
+        if (!fieldConfig) {
             return;
         }
-
-        const fieldConfig = validationOptions[name];
 
         // Mutual exclusivity check (only in dev mode)
         if (process.env.NODE_ENV !== 'production') {
@@ -153,12 +155,18 @@ export function useForm({
     const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>): void => {
         setValueFromChangeEvent(event);
         validateFromEvent(event);
-        validateRelatedFields(event);
+        const name = getFieldName(event);
+        if (name) {
+            validateRelatedFields(name);
+        }
     };
 
     const handleBlur = (event: React.FocusEvent<HTMLInputElement>): void => {
         validateFromEvent(event);
-        validateRelatedFields(event);
+        const name = getFieldName(event);
+        if (name) {
+            validateRelatedFields(name);
+        }
     };
 
     const validateAll = async (): Promise<boolean> => {

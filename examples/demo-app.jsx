@@ -127,7 +127,7 @@ const DemoApp = () => {
           errorMessage: 'If end date is entered, start date is also required'
         },
         {
-          isValid: partialFnWithFields(isAfter, '@startDate', partialFn_),
+          isValid: partialFnWithFields(isAfter, partialFn_, '@startDate'),
           errorMessage: 'End date must be after start date'
         }
       ],

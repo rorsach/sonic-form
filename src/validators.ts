@@ -23,21 +23,6 @@ const createFieldAwareValidator = <T extends unknown[]>(
   return validator(value, ...resolvedArgs);
 };
 
-// Field-aware versions of validators
-export const isAfterField = (reference: string) => (value: unknown, formValues?: { [key: string]: unknown }): boolean | true => {
-  const referenceValue = reference.startsWith('@') && formValues ? formValues[reference.slice(1)] : reference;
-  if (!value || !referenceValue) return true;
-  const d1 = parseDate(value as Date | string | number);
-  const d2 = parseDate(referenceValue as Date | string | number);
-  return !d1 || !d2 ? true : d1 > d2;
-};
-
-export const areDateFieldsPairedField = (otherField: string) => (value: unknown, formValues?: { [key: string]: unknown }): boolean | true => {
-  const otherValue = otherField.startsWith('@') && formValues ? formValues[otherField.slice(1)] : otherField;
-  const hasValue = Boolean(value && value.toString().trim().length > 0);
-  const hasOther = Boolean(otherValue && otherValue.toString().trim().length > 0);
-  return hasValue === hasOther || (!hasValue && !hasOther);
-};
 const withOptional = <T extends unknown[], R>(
   validator: (...args: T) => R,
 ) => (...args: T): R | true => {
@@ -131,12 +116,11 @@ export const isValidInternationalPhone = withOptional((value: string) => {
 // DATE & TIME VALIDATORS
 // =============================================================================
 
-export const isAfter = (reference: Date | string | number): ((value: Date | string | number) => boolean | true) =>
-  withOptional((value: Date | string | number): boolean => {
+export const isAfter = (value: Date | string | number, reference: Date | string | number): boolean => {
     const d1 = parseDate(value);
     const d2 = parseDate(reference);
     return !d1 || !d2 ? true : d1 > d2;
-  });
+};
 
 export const isBefore = (reference: Date | string | number): ((value: Date | string | number) => boolean | true) =>
   withOptional((value: Date | string | number): boolean => {
@@ -153,7 +137,7 @@ export const isWithinLastYear = withOptional((value: string | Date): boolean => 
   return d >= oneYearAgo;
 });
 
-export const isInTheFuture = isAfter(new Date());
+export const isInTheFuture = (value: Date | string | number): boolean => isAfter(value, new Date());
 
 // Minimum age (birth date)
 export const isBirthDateMinimumAge = (minAge: number): ((birthDate: string | Date) => boolean | true) =>
